@@ -114,8 +114,6 @@ class Analyser:
             setpoint=self.get_setpoint(fermenter),
             max_temp=self.max_temperature,
         )
-        self.log("info", context)
-
         self.check_temperature_convergence(**context)
         self.check_temperature_max(**context)
 
@@ -217,7 +215,7 @@ def main():
     parser.add_argument(
         "--server",
         dest="server",
-        help="Server to get the data from.",
+        help="Serveur auquel se connecter.",
         default="supervision.vieuxsinge.com",
     )
 
@@ -234,7 +232,7 @@ def main():
         "--credentials",
         dest="credentials",
         default="credentials.txt",
-        help="Path to the credentials filename.",
+        help="Chemin vers le fichier contenant les identifiants SMS.",
     )
 
     parser.add_argument(
