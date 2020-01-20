@@ -3,6 +3,23 @@
 from influxdb import InfluxDBClient
 import requests
 import pathlib
+from pprint import pprint
+from sty import fg, bg, ef, rs, Style, RgbFg
+
+
+ASCII_ART = """
+   .d8888b.                                              d8b          d8b
+  d88P  Y88b                                             Y8P          Y8P
+  Y88b.
+   "Y888b.   888  888 88888b.   .d88b.  888d888 888  888 888 .d8888b  888  .d88b.  88888b.
+      "Y88b. 888  888 888 "88b d8P  Y8b 888P"   888  888 888 88K      888 d88""88b 888 "88b
+        "888 888  888 888  888 88888888 888     Y88  88P 888 "Y8888b. 888 888  888 888  888
+  Y88b  d88P Y88b 888 888 d88P Y8b.     888      Y8bd8P  888      X88 888 Y88..88P 888  888
+   "Y8888P"   "Y88888 88888P"   "Y8888  888       Y88P   888  88888P' 888  "Y88P"  888  888
+                      888
+                      888
+                      888
+"""
 
 
 def unpack(s):
@@ -41,32 +58,45 @@ class Analyser:
             self._client._query = self._client.query
             self._client.query = _query
 
-    def log(self, channel, message):
-        icons = {"info": "→", "error": "💥", "check": "🎉", "phone": "📱"}
-        print(f"{icons.get(channel, '')} {message}")
+    def log(self, channel, message=""):
+        fg.orange = Style(RgbFg(255, 150, 50))
+        icons = {
+            "logo": (fg.white + ASCII_ART, fg.rs),
+            "info": (fg.white + " ", fg.rs + "\r\n"),
+            "error": ("  " + "💥 " + fg.orange, fg.rs),
+            "check": ("  " + "🎉 " + fg.green, fg.rs),
+            "phone": ("  " + "📱", ""),
+            "end": ("\r\n", ""),
+        }
+        before, after = icons.get(channel, "")
+        print(f"{before} {message} {after}")
 
-    def run(self, fermenters, date="now"):
+    def run(self, fermenters, date, group_time):
+        self.log("logo")
         self.log(
             "info", f"Recherche d'anomalies pour les fermenteurs {unpack(fermenters)}."
         )
         for fermenter in fermenters:
             try:
-                self.analyse(fermenter, start_time=date, analysis_duration=15)
+                self.analyse(fermenter, start_time=date, group_time=group_time)
             except Anomaly as e:
                 self.send_alert(e)
             else:
                 self.log("check", f"Pas d'anomalies detectées pour {fermenter}.")
 
-    def get_temperatures(self, fermenter, start_time="now", analysis_duration=15):
-        group_time = round(analysis_duration / 3)
+        self.log("end")
 
+    def get_temperatures(self, fermenter, start_time, group_time):
         if start_time == "now":
             start_time = "now()"
+
+        since = group_time * 3
 
         query = f"""
         SELECT mean("value") FROM "autogen"."mqtt_consumer_float"
         WHERE ("topic" = 'fermenters/{fermenter}/temperature')
-        AND time >=  {start_time} -72h
+        AND time >=  {start_time} -{since}m
+        AND time <= {start_time}
         GROUP BY time({group_time}m) fill(previous)
         """
 
@@ -98,22 +128,21 @@ class Analyser:
         response = self._client.query(query=query, database="telegraf")
         return response.raw["series"][0]["values"][0][1]
 
-    def analyse(self, fermenter, start_time="now", analysis_duration=15):
-        """Analyses the data, trying to find problems. Alerts if during time_window,
+    def analyse(self, fermenter, start_time, group_time):
+        """Analyses the data, trying to find problems. Alerts if during group_time,
         the temperature rises whereas it's supposed to be cooling.
         """
-        all_temperatures = self.get_temperatures(
-            fermenter, start_time, analysis_duration
-        )
-
+        all_temperatures = self.get_temperatures(fermenter, start_time, group_time)
         # Do the computation on the last 6 values (= last 30mn)
         context = dict(
             fermenter=fermenter,
-            temperatures=all_temperatures[-6:],
+            temperatures=all_temperatures,
             is_cooling=self.get_cooling_info(fermenter, start_time),
             setpoint=self.get_setpoint(fermenter),
             max_temp=self.max_temperature,
         )
+        if self.verbose:
+            pprint(context)
         self.check_temperature_convergence(**context)
         self.check_temperature_max(**context)
 
@@ -174,7 +203,7 @@ class Analyser:
                 f"({unpack([round(d, 2) for d in data['temperatures']])}) alors qu'il est sensé monter."
             )
         elif anomaly_type == "no-temperatures":
-            message = f"Aucune température n'est enregistrée par le fermenteur {data['fermenter']}"
+            message = f"Aucune température n'est enregistrée par le fermenteur {data['fermenter']}."
         else:
             message = anomaly_type
 
@@ -185,7 +214,7 @@ class Analyser:
 
     def send_multiple_sms(self, message):
         for (user, password) in self.sms_credentials:
-            response = requests.get(
+            requests.get(
                 "https://smsapi.free-mobile.fr/sendmsg",
                 params={"user": user, "pass": password, "msg": message},
             )
@@ -243,6 +272,26 @@ def main():
         help="Ne pas envoyer les SMS.",
     )
 
+    parser.add_argument(
+        "--date", dest="date", default="now", help="Date à analyser.",
+    )
+
+    parser.add_argument(
+        "--group-time",
+        dest="group_time",
+        default="30",
+        type=int,
+        help="Regroupage (en minutes). Par ex, utiliser '30' veut dire qu'une moyenne sera faite toutes les 30mn .",
+    )
+
+    parser.add_argument(
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="Afficher des informations pour aider au debugging.",
+    )
+
     args = parser.parse_args()
 
     analyser = Analyser(
@@ -250,10 +299,14 @@ def main():
         sms_credentials=parse_credentials(args.credentials),
         max_temperature=args.max_temperature,
         dry_run=args.dry_run,
+        verbose=args.verbose,
     )
-    analyser.run(fermenters=args.fermenters.split(","))
+    analyser.run(
+        date=args.date,
+        fermenters=args.fermenters.split(","),
+        group_time=args.group_time,
+    )
 
 
 if __name__ == "__main__":
     main()
-
