@@ -17,7 +17,7 @@ ASCII_ART = """
   Y88b  d88P Y88b 888 888 d88P Y8b.     888      Y8bd8P  888      X88 888 Y88..88P 888  888
    "Y8888P"   "Y88888 88888P"   "Y8888  888       Y88P   888  88888P' 888  "Y88P"  888  888
                       888
-                      888
+                      888                  https://supervision.vieuxsinge.com
                       888
 """
 
@@ -26,10 +26,14 @@ def unpack(s):
     return ", ".join(map(str, s))
 
 
+def unpack_and_round(values):
+    return unpack([round(d, 2) for d in values])
+
+
 class Anomaly(Exception):
-    def __init__(self, message, data):
+    def __init__(self, message, context):
         self.message = message
-        self.data = data
+        self.context = context
         super().__init__(message)
 
 
@@ -62,7 +66,9 @@ class Analyser:
         fg.orange = Style(RgbFg(255, 150, 50))
         icons = {
             "logo": (fg.white + ASCII_ART, fg.rs),
-            "info": (fg.white + " ", fg.rs + "\r\n"),
+            "header": (" " + ef.bold, rs.bold_dim),
+            "subheader": (ef.i + fg.white + " ", fg.rs + rs.i + "\r\n"),
+            "info": ("  " + "🤷 " + fg.white, fg.rs),
             "error": ("  " + "💥 " + fg.orange, fg.rs),
             "check": ("  " + "🎉 " + fg.green, fg.rs),
             "phone": ("  " + "📱", ""),
@@ -74,19 +80,31 @@ class Analyser:
     def run(self, fermenters, date, group_time):
         self.log("logo")
         self.log(
-            "info", f"Recherche d'anomalies pour les fermenteurs {unpack(fermenters)}."
+            "header", f"Recherche d'anomalies pour les fermenteurs {unpack(fermenters)}"
         )
+
+        msg = ""
+        if date != "now":
+            msg += f"pour la date {date}, "
+        msg += f"par tranches de {group_time} minutes."
+        self.log("subheader", msg)
+
         for fermenter in fermenters:
             try:
-                self.analyse(fermenter, start_time=date, group_time=group_time)
+                context = self.analyse(
+                    fermenter, start_time=date, group_time=group_time
+                )
             except Anomaly as e:
                 self.send_alert(e)
             else:
-                self.log("check", f"Pas d'anomalies detectées pour {fermenter}.")
+                self.log(
+                    "check",
+                    f"Pas d'anomalies detectées pour {fermenter} (consigne à {context['setpoint']}°C): {unpack_and_round(context['temperatures'])}.",
+                )
 
         self.log("end")
 
-    def get_temperatures(self, fermenter, start_time, group_time):
+    def get_temperatures(self, fermenter, start_time, group_time, tries=2):
         if start_time == "now":
             start_time = "now()"
 
@@ -102,7 +120,12 @@ class Analyser:
 
         response = self._client.query(query=query, database="telegraf")
         if not response:
-            raise Anomaly("no-temperatures", {"fermenter": fermenter})
+            if tries:
+                return self.get_temperatures(
+                    fermenter, start_time, group_time * 2, tries - 1
+                )
+            else:
+                raise Anomaly("no-temperatures", {"fermenter": fermenter})
 
         return [temp for _, temp in response.raw["series"][0]["values"] if temp]
 
@@ -145,6 +168,7 @@ class Analyser:
             pprint(context)
         self.check_temperature_convergence(**context)
         self.check_temperature_max(**context)
+        return context
 
     def check_temperature_max(self, fermenter, temperatures, max_temp, *args, **kwargs):
         # Did we exceed the max?
@@ -189,27 +213,32 @@ class Analyser:
             )
 
     def send_alert(self, anomaly):
-        data = anomaly.data
+        context = anomaly.context
         anomaly_type = anomaly.message
+
+        send = True
+        message_type = "error"
 
         if anomaly_type == "temperature-rising":
             message = (
-                f"""Attention, le fermenteur {data['fermenter']} grimpe en température """
-                f"""({unpack([round(d, 2) for d in data['temperatures']])}), alors qu'il est sensé refroidir !"""
+                f"""Le fermenteur {context['fermenter']} grimpe en température """
+                f"""({unpack_and_round(context['temperatures'])}), alors qu'il est """
+                f"""sensé refroidir (consigne à {context['setpoint']}°C)!"""
             )
         elif anomaly_type == "temperature-falling":
             message = (
-                f"Attention, le fermenteur {data['fermenter']} descends en temperature "
-                f"({unpack([round(d, 2) for d in data['temperatures']])}) alors qu'il est sensé monter."
+                f"Attention, le fermenteur {context['fermenter']} descends en temperature "
+                f"({unpack_and_round(context['temperatures'])}) alors qu'il est sensé monter."
             )
         elif anomaly_type == "no-temperatures":
-            message = f"Aucune température n'est enregistrée par le fermenteur {data['fermenter']}."
+            message = f"Aucune température n'est enregistrée par le fermenteur {context['fermenter']}."
+            send = False
+            message_type = "info"
         else:
             message = anomaly_type
 
-        if self.dry_run:
-            self.log("error", message)
-        else:
+        self.log(message_type, message)
+        if send and not self.dry_run:
             self.send_multiple_sms(message)
 
     def send_multiple_sms(self, message):
@@ -218,7 +247,7 @@ class Analyser:
                 "https://smsapi.free-mobile.fr/sendmsg",
                 params={"user": user, "pass": password, "msg": message},
             )
-            self.log("phone", f"SMS envoyé : {message}")
+            self.log("phone", f"SMS envoyé à {user}")
 
 
 def parse_credentials(filename):
