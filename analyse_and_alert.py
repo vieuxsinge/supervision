@@ -167,7 +167,7 @@ class Analyser:
         if self.verbose:
             pprint(context)
         self.check_temperature_convergence(**context)
-        self.check_temperature_max(**context)
+        # self.check_temperature_max(**context)
         return context
 
     def check_temperature_max(self, fermenter, temperatures, max_temp, *args, **kwargs):
