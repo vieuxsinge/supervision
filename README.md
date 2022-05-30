@@ -15,7 +15,7 @@ Le script tourne actuellement sur le même serveur que InfluxDB et Grafana.
 ## Exemples
 
 ```
-$ /usr/bin/python3 /home/supervision/supervision/analyse_and_alert.py --credentials /home/supervision/credentials.txt
+$ python3 analyse_and_alert.py --credentials /home/supervision/credentials.txt
 .d8888b.                                              d8b          d8b
 d88P  Y88b                                             Y8P          Y8P
 Y88b.
@@ -34,6 +34,14 @@ par tranches de 180 minutes.
 🤷  Aucune température n'est enregistrée par le fermenteur f1.
 🎉  Pas d'anomalies detectées pour f2 (consigne à 0°C): 5.95, 5.95, 5.95, 5.95.
 🎉  Pas d'anomalies detectées pour f3 (consigne à 0°C): 4.25, 4.25, 4.25, 4.25.
+```
+
+## Installation
+
+```bash
+git clone https://github.com/vieuxsinge/supervision.git && cd supervision
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
 ## Configuration
