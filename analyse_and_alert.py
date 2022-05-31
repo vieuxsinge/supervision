@@ -1,7 +1,7 @@
 # coding=utf-8
 
 from influxdb import InfluxDBClient
-import requests
+import ovh
 import pathlib
 from pprint import pprint
 from sty import fg, bg, ef, rs, Style, RgbFg
@@ -31,7 +31,7 @@ def unpack_and_round(values):
 
 
 class Anomaly(Exception):
-    def __init__(self, message, context):
+    def __init__(self, message, context={}):
         self.message = message
         self.context = context
         super().__init__(message)
@@ -46,12 +46,16 @@ class Analyser:
         max_temperature=23,
         verbose=False,
         dry_run=False,
+        send_test_message=False,
+        phone_numbers=None
     ):
         self._client = InfluxDBClient(host, 8086)
         self.sms_credentials = sms_credentials
         self.verbose = verbose
         self.dry_run = dry_run
         self.max_temperature = max_temperature
+        self.send_test_message = send_test_message
+        self.phone_numbers = phone_numbers or []
 
         if self.verbose:
 
@@ -102,6 +106,11 @@ class Analyser:
                     f"Pas d'anomalies detectées pour {fermenter} (consigne à {context['setpoint']}°C): {unpack_and_round(context['temperatures'])}.",
                 )
 
+        if self.send_test_message:
+            self.send_alert(Anomaly(
+                ("Ceci est un message de test envoyé par le système "
+                 "de supervision de la brasserie")))
+
         self.log("end")
 
     def get_temperatures(self, fermenter, start_time, group_time, tries=2):
@@ -127,7 +136,10 @@ class Analyser:
             else:
                 raise Anomaly("no-temperatures", {"fermenter": fermenter})
 
-        return [temp for _, temp in response.raw["series"][0]["values"] if temp]
+        temperatures = [temp for _, temp in response.raw["series"][0]["values"] if temp]
+        if not temperatures:
+            raise Anomaly("no-temperatures", {"fermenter": fermenter})
+        return temperatures
 
     def get_setpoint(self, fermenter):
         query = f"""
@@ -152,9 +164,6 @@ class Analyser:
         return response.raw["series"][0]["values"][0][1]
 
     def analyse(self, fermenter, start_time, group_time):
-        """Analyses the data, trying to find problems. Alerts if during group_time,
-        the temperature rises whereas it's supposed to be cooling.
-        """
         all_temperatures = self.get_temperatures(fermenter, start_time, group_time)
         # Do the computation on the last 6 values (= last 30mn)
         context = dict(
@@ -167,7 +176,7 @@ class Analyser:
         if self.verbose:
             pprint(context)
         self.check_temperature_convergence(**context)
-        # self.check_temperature_max(**context)
+        self.check_temperature_max(**context)
         return context
 
     def check_temperature_max(self, fermenter, temperatures, max_temp, *args, **kwargs):
@@ -242,18 +251,26 @@ class Analyser:
             self.send_multiple_sms(message)
 
     def send_multiple_sms(self, message):
-        for (user, password) in self.sms_credentials:
-            requests.get(
-                "https://smsapi.free-mobile.fr/sendmsg",
-                params={"user": user, "pass": password, "msg": message},
-            )
-            self.log("phone", f"SMS envoyé à {user}")
+        (app_name, app_key, app_secret, key) = self.sms_credentials
+        client = ovh.Client(
+            endpoint='ovh-eu',
+            application_key=app_key,
+            application_secret=app_secret,
+            consumer_key=key,
+        )
+
+        result = client.post(f'/sms/{app_name}/jobs',
+            message=message,
+            noStopClause=True,
+            receivers=self.phone_numbers,
+            senderForResponse=True,
+        )
+        self.log("phone", f"SMS envoyé à {self.phone_numbers}")
 
 
 def parse_credentials(filename):
-    text = pathlib.Path(filename).read_text("utf-8")
-    credentials = [line.split(":") for line in text.splitlines()]
-    return credentials
+    text = pathlib.Path(filename).read_text("utf-8").strip("\n")
+    return text.split(":")
 
 
 def main():
@@ -267,7 +284,7 @@ def main():
         "--fermenters",
         dest="fermenters",
         help="Fermenteurs à utiliser.",
-        default="f1,f2,f3",
+        default="f1,f2,f3,f4",
     )
 
     parser.add_argument(
@@ -282,7 +299,7 @@ def main():
         dest="max_temperature",
         type=int,
         help="Température maximum autorisée dans les fermenteurs",
-        default=25,
+        default=200,
     )
 
     parser.add_argument(
@@ -290,7 +307,15 @@ def main():
         "--credentials",
         dest="credentials",
         default="credentials.txt",
-        help="Chemin vers le fichier contenant les identifiants SMS.",
+        help="Chemin vers le fichier contenant les identifiants du service SMS.",
+    )
+
+    parser.add_argument(
+        "--phone-numbers",
+        dest="phone_numbers",
+        nargs='+',
+        required=True,
+        help='La liste des numéros de téléphone (avec leur préfixes) où envoyer les messages'
     )
 
     parser.add_argument(
@@ -299,6 +324,14 @@ def main():
         action="store_true",
         default=False,
         help="Ne pas envoyer les SMS.",
+    )
+
+    parser.add_argument(
+        "--send-test-message",
+        dest="send_test_message",
+        action="store_true",
+        default=False,
+        help="Envoi un message SMS pour tester le fonctionnement.",
     )
 
     parser.add_argument(
@@ -329,6 +362,8 @@ def main():
         max_temperature=args.max_temperature,
         dry_run=args.dry_run,
         verbose=args.verbose,
+        send_test_message=args.send_test_message,
+        phone_numbers=args.phone_numbers,
     )
     analyser.run(
         date=args.date,
