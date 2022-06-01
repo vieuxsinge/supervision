@@ -1,1 +1,1 @@
-*/30 * * * * /usr/bin/python3 /home/supervision/supervision/analyse_and_alert.py --credentials /home/supervision/credentials.txt
+*/30 * * * * /usr/bin/python3 /home/supervision/supervision/analyse_and_alert.py --credentials /home/supervision/credentials.txt --phone-numbers +336XXXXXXXX +336XXXXXXXX +337XXXXXXXX

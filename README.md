@@ -44,6 +44,16 @@ python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
+## Utilisation
+
+Si vous souhaitez utiliser l'envoi de SMS, le script est dépendant d'un compte SMS chez OVH.
+Il faut ensuite créer un fichier `credentials.txt` qui contient les informations suivantes, séparées par des points virgules. Vous pouvez obtenir ces informations [en suivant ce lien](https://eu.api.ovh.com/createToken/index.cgi?GET=/sms&GET=/sms/*/jobs/&POST=/sms/*/jobs/):
+
+```
+nom-d-compte-sms:app_key:app_secret:consumer_key
+```
+
+
 ## Configuration
 
 Vous pouvez trouver dans le dossier « config » des fichiers de configuration qui sont utiles pour déployer le système.
