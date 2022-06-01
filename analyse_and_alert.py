@@ -341,7 +341,7 @@ def main():
     parser.add_argument(
         "--group-time",
         dest="group_time",
-        default="30",
+        default="120",
         type=int,
         help="Regroupage (en minutes). Par ex, utiliser '30' veut dire qu'une moyenne sera faite toutes les 30mn .",
     )
