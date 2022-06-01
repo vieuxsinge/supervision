@@ -335,11 +335,17 @@
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Mesuré",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -387,15 +393,18 @@
             {
               "options": {
                 "0": {
-                  "text": "OFF"
+                  "index": 0,
+                  "text": "Non"
                 },
                 "1": {
-                  "text": "ON"
+                  "index": 1,
+                  "text": "Oui"
                 }
               },
               "type": "value"
             }
           ],
+          "min": -1,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -443,6 +452,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Refroidissement",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -531,6 +545,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Consigne",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -876,6 +895,7 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Mesuré",
           "datasource": {
             "type": "influxdb",
             "uid": "000000001"
@@ -927,10 +947,12 @@
             {
               "options": {
                 "0": {
-                  "text": "OFF"
+                  "index": 0,
+                  "text": "Non"
                 },
                 "1": {
-                  "text": "ON"
+                  "index": 1,
+                  "text": "Oui"
                 }
               },
               "type": "value"
@@ -983,6 +1005,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Refroidissement",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1071,6 +1098,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Consigne",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1416,6 +1448,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Mesuré",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1463,10 +1500,12 @@
             {
               "options": {
                 "0": {
-                  "text": "OFF"
+                  "index": 0,
+                  "text": "Non"
                 },
                 "1": {
-                  "text": "ON"
+                  "index": 1,
+                  "text": "Oui"
                 }
               },
               "type": "value"
@@ -1519,6 +1558,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Refroidissement",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1607,6 +1651,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Consigne",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1952,6 +2001,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Mesuré",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -1999,10 +2053,12 @@
             {
               "options": {
                 "0": {
-                  "text": "OFF"
+                  "index": 0,
+                  "text": "Non"
                 },
                 "1": {
-                  "text": "ON"
+                  "index": 1,
+                  "text": "Oui"
                 }
               },
               "type": "value"
@@ -2055,6 +2111,11 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Refroidissement",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
@@ -2143,547 +2204,16 @@
       "pluginVersion": "8.5.2",
       "targets": [
         {
+          "alias": "Consigne",
+          "datasource": {
+            "type": "influxdb",
+            "uid": "000000001"
+          },
           "groupBy": [],
           "measurement": "mqtt_consumer_float",
           "orderByTime": "ASC",
           "policy": "autogen",
           "query": "SELECT last(\"value\") FROM \"autogen\".\"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/f4/setpoint')",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "topic",
-              "operator": "=",
-              "value": "fermenters/f3/setpoint"
-            }
-          ]
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "000000001"
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 1,
-        "x": 0,
-        "y": 16
-      },
-      "id": 27,
-      "options": {
-        "content": "\n## BT\n\n",
-        "mode": "markdown"
-      },
-      "pluginVersion": "8.5.2",
-      "targets": [
-        {
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "null"
-              ],
-              "type": "fill"
-            }
-          ],
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        }
-      ],
-      "transparent": true,
-      "type": "text"
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": {
-        "type": "influxdb",
-        "uid": "000000001"
-      },
-      "decimals": 1,
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 4,
-        "w": 17,
-        "x": 1,
-        "y": 16
-      },
-      "hiddenSeries": false,
-      "id": 28,
-      "legend": {
-        "alignAsTable": false,
-        "avg": false,
-        "current": false,
-        "hideEmpty": false,
-        "hideZero": false,
-        "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": false,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 2,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "8.5.2",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [
-        {
-          "alias": "Consigne",
-          "color": "#73BF69"
-        },
-        {
-          "alias": "Température",
-          "color": "#FF9830"
-        }
-      ],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "alias": "Consigne",
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "previous"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "mqtt_consumer_float",
-          "orderByTime": "ASC",
-          "policy": "autogen",
-          "query": "SELECT last(\"value\") FROM \"autogen\".\"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/f1/setpoint') AND $timeFilter GROUP BY time($__interval) fill(previous)",
-          "rawQuery": false,
-          "refId": "B",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "topic",
-              "operator": "=",
-              "value": "fermenters/bt/setpoint"
-            }
-          ]
-        },
-        {
-          "alias": "Température",
-          "groupBy": [
-            {
-              "params": [
-                "$__interval"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "previous"
-              ],
-              "type": "fill"
-            }
-          ],
-          "hide": false,
-          "measurement": "mqtt_consumer_float",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "query": "SELECT last(\"value\") FROM \"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/f1/temperature') AND $timeFilter GROUP BY time($__interval) fill(previous)",
-          "rawQuery": false,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "topic",
-              "operator": "=",
-              "value": "fermenters/bt/temperature"
-            }
-          ]
-        }
-      ],
-      "thresholds": [],
-      "timeRegions": [
-        {
-          "colorMode": "gray",
-          "fill": true,
-          "fillColor": "rgba(234, 112, 112, 0.12)",
-          "fromDayOfWeek": 1,
-          "line": false,
-          "lineColor": "rgba(237, 46, 24, 0.60)",
-          "op": "time",
-          "toDayOfWeek": 5
-        }
-      ],
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "celsius",
-          "logBase": 1,
-          "max": "25",
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "000000001"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "celsius"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 3,
-        "x": 18,
-        "y": 16
-      },
-      "id": 29,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.2",
-      "targets": [
-        {
-          "groupBy": [],
-          "measurement": "mqtt_consumer_float",
-          "orderByTime": "ASC",
-          "policy": "autogen",
-          "query": "SELECT last(\"value\") FROM \"autogen\".\"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/bt/temperature')",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "topic",
-              "operator": "=",
-              "value": "fermenters/f3/temperature"
-            }
-          ]
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "000000001"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [
-            {
-              "options": {
-                "0": {
-                  "text": "OFF"
-                },
-                "1": {
-                  "text": "ON"
-                }
-              },
-              "type": "value"
-            }
-          ],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#d44a3a",
-                "value": null
-              },
-              {
-                "color": "rgba(237, 129, 40, 0.89)",
-                "value": 0.5
-              },
-              {
-                "color": "#299c46",
-                "value": 1
-              }
-            ]
-          },
-          "unit": "none"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 4,
-        "w": 3,
-        "x": 21,
-        "y": 16
-      },
-      "id": 31,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.2",
-      "targets": [
-        {
-          "groupBy": [],
-          "measurement": "mqtt_consumer_float",
-          "orderByTime": "ASC",
-          "policy": "autogen",
-          "query": "SELECT last(\"value\") FROM \"autogen\".\"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/bt/cooling')",
-          "rawQuery": true,
-          "refId": "A",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "last"
-              }
-            ]
-          ],
-          "tags": [
-            {
-              "key": "topic",
-              "operator": "=",
-              "value": "fermenters/f3/cooling"
-            }
-          ]
-        }
-      ],
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "influxdb",
-        "uid": "000000001"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "decimals": 1,
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "celsius"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 2,
-        "w": 3,
-        "x": 18,
-        "y": 18
-      },
-      "id": 30,
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "colorMode": "none",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "horizontal",
-        "reduceOptions": {
-          "calcs": [
-            "mean"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "textMode": "auto"
-      },
-      "pluginVersion": "8.5.2",
-      "targets": [
-        {
-          "groupBy": [],
-          "measurement": "mqtt_consumer_float",
-          "orderByTime": "ASC",
-          "policy": "autogen",
-          "query": "SELECT last(\"value\") FROM \"autogen\".\"mqtt_consumer_float\" WHERE (\"topic\" = 'fermenters/bt/setpoint')",
           "rawQuery": true,
           "refId": "A",
           "resultFormat": "time_series",
@@ -2741,6 +2271,6 @@
   "timezone": "",
   "title": "Températures",
   "uid": "gVK93STZz",
-  "version": 3,
+  "version": 5,
   "weekStart": ""
 }
