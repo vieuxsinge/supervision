@@ -1,7 +1,8 @@
 # coding=utf-8
 
+import delegator
+
 from influxdb import InfluxDBClient
-import ovh
 import pathlib
 from pprint import pprint
 from sty import fg, bg, ef, rs, Style, RgbFg
@@ -17,7 +18,7 @@ ASCII_ART = """
   Y88b  d88P Y88b 888 888 d88P Y8b.     888      Y8bd8P  888      X88 888 Y88..88P 888  888
    "Y8888P"   "Y88888 88888P"   "Y8888  888       Y88P   888  88888P' 888  "Y88P"  888  888
                       888
-                      888                  https://supervision.vieuxsinge.com
+                      888
                       888
 """
 
@@ -42,23 +43,22 @@ class Analyser:
         self,
         host="localhost",
         port="8086",
-        sms_credentials=(),
+        signal_group_id=None,
+        signal_cli="/usr/bin/signal-cli",
         max_temperature=23,
         verbose=False,
         dry_run=False,
         send_test_message=False,
-        phone_numbers=None
     ):
         self._client = InfluxDBClient(host, 8086)
-        self.sms_credentials = sms_credentials
+        self.signal_group_id = signal_group_id
         self.verbose = verbose
         self.dry_run = dry_run
         self.max_temperature = max_temperature
         self.send_test_message = send_test_message
-        self.phone_numbers = phone_numbers or []
+        self.signal_cli = signal_cli
 
         if self.verbose:
-
             def _query(*args, **kwargs):
                 print(kwargs["query"])
                 return self._client._query(*args, **kwargs)
@@ -76,10 +76,11 @@ class Analyser:
             "error": ("  " + "💥 " + fg.orange, fg.rs),
             "check": ("  " + "🎉 " + fg.green, fg.rs),
             "phone": ("  " + "📱", ""),
-            "end": ("\r\n", ""),
+            "debug": ("  " + "🐛", fg.rs),
+            "end": ("\r\n", bg.rs),
         }
         before, after = icons.get(channel, "")
-        print(f"{before} {message} {after}")
+        print(f"{bg.black}{before} {message} {after}")
 
     def run(self, fermenters, date, group_time):
         self.log("logo")
@@ -251,21 +252,13 @@ class Analyser:
             self.send_multiple_sms(message)
 
     def send_multiple_sms(self, message):
-        (app_name, app_key, app_secret, key) = self.sms_credentials
-        client = ovh.Client(
-            endpoint='ovh-eu',
-            application_key=app_key,
-            application_secret=app_secret,
-            consumer_key=key,
-        )
-
-        result = client.post(f'/sms/{app_name}/jobs',
-            message=message,
-            noStopClause=True,
-            receivers=self.phone_numbers,
-            senderForResponse=True,
-        )
-        self.log("phone", f"SMS envoyé à {self.phone_numbers}")
+        command = f'{self.signal_cli} send -m "{message}" -g {self.signal_group_id}'
+        resp = delegator.run(command)
+        self.log("debug", command)
+        if resp.err:
+            self.log("error", resp.err)
+        else:
+            self.log("phone", f"Message de groupe envoyé à {self.signal_group_id}")
 
 
 def parse_credentials(filename):
@@ -277,20 +270,20 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Analyse les données dans influxdb à la recherche d'anomalies"
+        description="Analyse influxdb data, looking for anomalies"
     )
 
     parser.add_argument(
         "--fermenters",
         dest="fermenters",
-        help="Fermenteurs à utiliser.",
+        help="Fermentation vessels to look for.",
         default="f1,f2,f3,f4",
     )
 
     parser.add_argument(
         "--server",
         dest="server",
-        help="Serveur auquel se connecter.",
+        help="Server to connect to.",
         default="supervision.vieuxsinge.com",
     )
 
@@ -298,24 +291,22 @@ def main():
         "--max-temperature",
         dest="max_temperature",
         type=int,
-        help="Température maximum autorisée dans les fermenteurs",
+        help="Max temperature allowed in the Fermentation vessels",
         default=200,
     )
 
     parser.add_argument(
-        "-c",
-        "--credentials",
-        dest="credentials",
-        default="credentials.txt",
-        help="Chemin vers le fichier contenant les identifiants du service SMS.",
+        "--signal-cli",
+        dest="signal_cli",
+        help="Path to the signal-cli executable",
+        default="/usr/bin/signal-cli-" #FIXME
     )
 
     parser.add_argument(
-        "--phone-numbers",
-        dest="phone_numbers",
-        nargs='+',
+        "--signal-group-id",
+        dest="signal_group_id",
         required=True,
-        help='La liste des numéros de téléphone (avec leur préfixes) où envoyer les messages'
+        help='The signal group id to send the messages to'
     )
 
     parser.add_argument(
@@ -323,7 +314,7 @@ def main():
         dest="dry_run",
         action="store_true",
         default=False,
-        help="Ne pas envoyer les SMS.",
+        help="Check for temperatures, but do not send messages.",
     )
 
     parser.add_argument(
@@ -331,11 +322,11 @@ def main():
         dest="send_test_message",
         action="store_true",
         default=False,
-        help="Envoi un message SMS pour tester le fonctionnement.",
+        help="Sends a test message to check everything works.",
     )
 
     parser.add_argument(
-        "--date", dest="date", default="now", help="Date à analyser.",
+        "--date", dest="date", default="now", help="Date to look for.",
     )
 
     parser.add_argument(
@@ -343,7 +334,7 @@ def main():
         dest="group_time",
         default="120",
         type=int,
-        help="Regroupage (en minutes). Par ex, utiliser '30' veut dire qu'une moyenne sera faite toutes les 30mn .",
+        help="Number of minutes to group the data in. For instance, using '30' means a mean will be done every 30mn .",
     )
 
     parser.add_argument(
@@ -351,19 +342,19 @@ def main():
         dest="verbose",
         action="store_true",
         default=False,
-        help="Afficher des informations pour aider au debugging.",
+        help="Be verbose, in order to help during debug",
     )
 
     args = parser.parse_args()
 
     analyser = Analyser(
         host=args.server,
-        sms_credentials=parse_credentials(args.credentials),
+        signal_group_id=args.signal_group_id,
         max_temperature=args.max_temperature,
         dry_run=args.dry_run,
         verbose=args.verbose,
         send_test_message=args.send_test_message,
-        phone_numbers=args.phone_numbers,
+        signal_cli=args.signal_cli
     )
     analyser.run(
         date=args.date,
