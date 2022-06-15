@@ -1,16 +1,28 @@
 # Supervision
 
-Ce dépôt contient les sources d'un logiciel qui permet de faire le suivi et la supervision des températures de nos fermenteurs, à la [Brasserie du Vieux Singe](https://www.vieuxsinge.com). Nous avons eu besoin de mettre en place un outil de ce type pour détecter les problèmes avec notre groupe froid, et être prévenu en cas d'erreurs.
+This repository contains the sources for a software able to do supervision of
+the temperatures in our fermenters, at the [Brasserie du Vieux Singe (FR,
+Rennes)](https://www.vieuxsinge.com).
 
-![Capture de l'interface de Grafana](interface.png)
+We decided to implement a solution like this to be able to be notified when
+problem occur with our cold group.
 
-Le script utilise python, et nous le faisons tourner dans un `cronjob` de manière automatique. Lorsque une erreur est détectée, un message nous est envoyé par SMS.
+When problems are detected, a notification is sent to a [Signal](https://signal.org) group.
 
-Les données sont collectées localement via des [thermostats connectés](https://github.com/vieuxsinge/stc1000esp) bricolés à partir de STC1000, qui envoient des messages [MQTT](https://mqtt.org/) par Wifi à notre serveur.
+![The Grafana Interface, showing temperature graphs](interface.png)
 
-Les messages sont ensuite agrégés par [Telegraf](https://www.influxdata.com/time-series-platform/telegraf/) dans une base de données [InfluxDB](https://www.influxdata.com/), et visualisés à travers une installation de [Grafana](https://grafana.com/).
+The script uses Python, and we make it run in a cronjob.
 
-Le script tourne actuellement sur le même serveur que InfluxDB et Grafana.
+Data is collected locally via [connected
+thermostats](https://github.com/vieuxsinge/stc1000esp) made out of STC1000.
+They send messages via [MQTT](https://mqtt.org/) via Wifi to our server.
+
+Messages are then aggregated by
+[Telegraf](https://www.influxdata.com/time-series-platform/telegraf/) in an
+[InfluxDB](https://www.influxdata.com/), and visualized via
+[Grafana](https://grafana.com/).
+
+(The script messages are implemented in French for now, as we are the only one using the tool)
 
 ## Exemples
 
@@ -25,7 +37,7 @@ Y88b.
 Y88b  d88P Y88b 888 888 d88P Y8b.     888      Y8bd8P  888      X88 888 Y88..88P 888  888
 "Y8888P"   "Y88888 88888P"   "Y8888  888       Y88P   888  88888P' 888  "Y88P"  888  888
                    888
-                   888                  https://supervision.vieuxsinge.com
+                   888                 
                    888
 
 Recherche d'anomalies pour les fermenteurs f1, f2, f3
@@ -38,27 +50,53 @@ par tranches de 180 minutes.
 
 ## Installation
 
+### Dépendences
+
+The system relies on [signal-cli](https://github.com/AsamK/signal-cli/) to send
+notifications to a Signal group. 
+
+You then have to install it. Here are some simple instructions to do so on Debian 10.
+
+On Debian, you can follow [the instructions on this
+page](https://packaging.gitlab.io/signal-cli/installation/standalone/). You
+need to install `signal-cli-service` and `signal-cli-native`.
+
+Once this is done, you need to configure signal-cli to connect with a Signal
+account.
+
+You can configure it with a phone number as a primary device or link an
+existing device. We're linking here with a secondary device.
+
+```bash
+signal-cli-native link -n "Supervision brasserie" | tee >(xargs -L 1 qrencode -t utf8)
+```
+
+Then scan this QRcode on your signal app on Android.
+
+You then need to sync the messages :
+
+```bash
+signal-cli-native -u +phone-number receive
+```
+
+And then you need to get the group ID you want to use.
+
+```bash
+signal-cli-native listGroups
+```
+
+
 ```bash
 git clone https://github.com/vieuxsinge/supervision.git && cd supervision
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## Utilisation
-
-Si vous souhaitez utiliser l'envoi de SMS, le script est dépendant d'un compte SMS chez OVH.
-Il faut ensuite créer un fichier `credentials.txt` qui contient les informations suivantes, séparées par des points virgules. Vous pouvez obtenir ces informations [en suivant ce lien](https://eu.api.ovh.com/createToken/index.cgi?GET=/sms&GET=/sms/*/jobs/&POST=/sms/*/jobs/):
-
-```
-nom-d-compte-sms:app_key:app_secret:consumer_key
-```
-
-
 ## Configuration
 
-Vous pouvez trouver dans le dossier « config » des fichiers de configuration qui sont utiles pour déployer le système.
+We've put a bunch of configuration files in the "config" folder.
 
-- [Le fichier crontab](config/crontab) pour que le script se lance tout seul ;
-- [La configuration de Grafana au format JSON](config/grafana.json) pour visualiser les données ;
-- [La configuration de mosquito](config/mosquito.conf) pour pouvoir recevoir les données ;
-- [La configuration de Telegraf](config/telegraf.conf) qui permet d'agréger les données.
+- [The crontab file](config/crontab) for the script to run on its own ;
+- [Grafana config files in JSON](config/grafana.json) to visualize data ;
+- [Mosquito configuration](config/mosquito.conf) to receive data ;
+- [Telegraf configuration](config/telegraf.conf) to aggregate the data.
