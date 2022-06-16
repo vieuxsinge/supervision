@@ -104,7 +104,7 @@ class Analyser:
             else:
                 self.log(
                     "check",
-                    f"Pas d'anomalies detectées pour {fermenter} (consigne à {context['setpoint']}°C): {unpack_and_round(context['temperatures'])}.",
+                    f"Pas d'anomalies détectées pour {fermenter} (consigne à {context['setpoint']}°C): {unpack_and_round(context['temperatures'])}.",
                 )
 
         if self.send_test_message:

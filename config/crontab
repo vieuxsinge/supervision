@@ -1,1 +1,2 @@
-*/30 * * * * /usr/bin/python3 /home/supervision/supervision/analyse_and_alert.py --credentials /home/supervision/credentials.txt --phone-numbers +336XXXXXXXX +336XXXXXXXX +337XXXXXXXX
+10 * * * * /usr/bin/python3 /home/supervision/supervision/analyse_and_alert.py --signal-cli /usr/bin/signal-cli-native --signal-group-id GROUP_ID
+9 * * * * /usr/bin/signal-cli-native -u YOUR_NUMBER_WITH_PREFIX receive

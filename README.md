@@ -27,7 +27,7 @@ Messages are then aggregated by
 ## Exemples
 
 ```
-$ python3 analyse_and_alert.py --credentials /home/supervision/credentials.txt
+$ python3 analyse_and_alert.py
 .d8888b.                                              d8b          d8b
 d88P  Y88b                                             Y8P          Y8P
 Y88b.
@@ -44,8 +44,8 @@ Recherche d'anomalies pour les fermenteurs f1, f2, f3
 par tranches de 180 minutes.
 
 🤷  Aucune température n'est enregistrée par le fermenteur f1.
-🎉  Pas d'anomalies detectées pour f2 (consigne à 0°C): 5.95, 5.95, 5.95, 5.95.
-🎉  Pas d'anomalies detectées pour f3 (consigne à 0°C): 4.25, 4.25, 4.25, 4.25.
+🎉  Pas d'anomalies détectées pour f2 (consigne à 0°C): 5.95, 5.95, 5.95, 5.95.
+🎉  Pas d'anomalies détectées pour f3 (consigne à 0°C): 4.25, 4.25, 4.25, 4.25.
 ```
 
 ## Installation
@@ -53,7 +53,7 @@ par tranches de 180 minutes.
 ### Dépendences
 
 The system relies on [signal-cli](https://github.com/AsamK/signal-cli/) to send
-notifications to a Signal group. 
+notifications to a Signal group.
 
 You then have to install it. Here are some simple instructions to do so on Debian 10.
 
