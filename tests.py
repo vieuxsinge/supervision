@@ -1,28 +1,6 @@
 from analyse_and_alert import Analyser, Anomaly
 from pytest import raises
 
-
-def test_check_temperature_does_not_exceeds_max():
-    analyser = Analyser()
-
-    analyser.check_temperature_max(
-        fermenter="f1", temperatures=[20, 21, 22, 23], max_temp=25
-    )
-
-    analyser.check_temperature_max(
-        fermenter="f1", temperatures=[20, 21, 22, 23, 24, 25], max_temp=25
-    )
-
-
-def test_check_temperature_exceeds_max():
-    analyser = Analyser()
-
-    with raises(Anomaly) as excinfo:
-        analyser.check_temperature_max(
-            fermenter="f1", temperatures=[21, 22, 23, 24, 25.1], max_temp=25
-        )
-    assert excinfo.value.message == "temperature-exceeds-max"
-
 def test_convergence_to_zero_does_not_raise():
     analyser = Analyser()
     analyser.check_temperature_convergence(
@@ -32,7 +10,6 @@ def test_convergence_to_zero_does_not_raise():
         setpoint=0,
         acceptable_delta=0.5
     )
-
 
 def test_convergence_does_not_raise_on_contained_variations():
     analyser = Analyser()

@@ -45,7 +45,6 @@ class Analyser:
         port="8086",
         signal_group_id=None,
         signal_cli="/usr/bin/signal-cli",
-        max_temperature=23,
         max_authorized_delta=0.5,
         verbose=False,
         dry_run=False,
@@ -55,7 +54,6 @@ class Analyser:
         self.signal_group_id = signal_group_id
         self.verbose = verbose
         self.dry_run = dry_run
-        self.max_temperature = max_temperature
         self.send_test_message = send_test_message
         self.signal_cli = signal_cli
         self.max_authorized_delta = max_authorized_delta
@@ -174,22 +172,13 @@ class Analyser:
             temperatures=all_temperatures,
             is_cooling=self.get_cooling_info(fermenter, start_time),
             setpoint=self.get_setpoint(fermenter),
-            max_temp=self.max_temperature,
             acceptable_delta=self.max_authorized_delta
         )
         if self.verbose:
             pprint(context)
         self.check_temperature_convergence(**context)
-        self.check_temperature_max(**context)
         return context
 
-    def check_temperature_max(self, fermenter, temperatures, max_temp, *args, **kwargs):
-        # Did we exceed the max?
-        if any([temp > max_temp for temp in temperatures]):
-            raise Anomaly(
-                "temperature-exceeds-max",
-                {"fermenter": fermenter, "temperatures": temperatures},
-            )
 
     def check_temperature_convergence(
         self,
@@ -328,14 +317,6 @@ def main():
     )
 
     parser.add_argument(
-        "--max-temperature",
-        dest="max_temperature",
-        type=int,
-        help="Max temperature allowed in the Fermentation vessels",
-        default=200,
-    )
-
-    parser.add_argument(
         "--max-delta",
         dest="max_authorized_delta",
         type=float,
@@ -398,7 +379,6 @@ def main():
     analyser = Analyser(
         host=args.server,
         signal_group_id=args.signal_group_id,
-        max_temperature=args.max_temperature,
         dry_run=args.dry_run,
         verbose=args.verbose,
         send_test_message=args.send_test_message,
