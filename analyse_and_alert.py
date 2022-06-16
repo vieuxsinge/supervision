@@ -328,7 +328,7 @@ def main():
         "--signal-cli",
         dest="signal_cli",
         help="Path to the signal-cli executable",
-        default="/usr/bin/signal-cli-" #FIXME
+        default="/usr/bin/signal-cli"
     )
 
     parser.add_argument(
