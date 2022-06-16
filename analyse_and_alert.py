@@ -46,6 +46,7 @@ class Analyser:
         signal_group_id=None,
         signal_cli="/usr/bin/signal-cli",
         max_temperature=23,
+        max_authorized_delta=0.5,
         verbose=False,
         dry_run=False,
         send_test_message=False,
@@ -57,6 +58,7 @@ class Analyser:
         self.max_temperature = max_temperature
         self.send_test_message = send_test_message
         self.signal_cli = signal_cli
+        self.max_authorized_delta = max_authorized_delta
 
         if self.verbose:
             def _query(*args, **kwargs):
@@ -173,6 +175,7 @@ class Analyser:
             is_cooling=self.get_cooling_info(fermenter, start_time),
             setpoint=self.get_setpoint(fermenter),
             max_temp=self.max_temperature,
+            acceptable_delta=self.max_authorized_delta
         )
         if self.verbose:
             pprint(context)
@@ -189,29 +192,66 @@ class Analyser:
             )
 
     def check_temperature_convergence(
-        self, fermenter, temperatures, is_cooling, setpoint, *args, **kwargs
+        self,
+        fermenter,
+        temperatures,
+        is_cooling,
+        setpoint,
+        acceptable_delta,
+        *args,
+        **kwargs
     ):
-        is_decreasing = all(i >= j for i, j in zip(temperatures, temperatures[1:]))
-        is_increasing = any(i < j for i, j in zip(temperatures, temperatures[1:]))
+        # That's here that we detect if problems occured.
+        # We check :
+        # - Should the temperature be falling? rising?
+        # - Is it rising or falling? Are we going in the right direction?
+        # - If we are going in the wrong direction, at what pace? is it acceptable?
+        # - If we are about to send an alert, filter-out false positives :
+        #   - delta to setpoint > 0.5°C
+        #   -
 
-        if setpoint < temperatures[-1]:
-            if (
-                is_increasing
-                and is_cooling
-                and (temperatures[-1] - temperatures[0]) > 0.5
-            ):
-                raise Anomaly(
-                    "temperature-rising",
-                    {
-                        "fermenter": fermenter,
-                        "temperatures": temperatures,
-                        "setpoint": setpoint,
-                    },
-                )
+        # If setpoint < last_temp, then we're going the wrong way.
+        # Ex : Setpoint = 0
+        # Mesured temperature = 21, 20, 19, 18
+        # Then we're OK.
+        #
+        # But… Setpoint = 0
+        # Mesured temperature = 6,7,8
+        # We should raise.
+        # So we need to know :
+        # 1. If we're increasing or decreasing
+        # 2. If we should be increasing or decreasing.
+
+        last_temp = temperatures[-1]
+
+        should_decrease = setpoint < last_temp
+        should_increase = setpoint > last_temp
+
+        inner_delta = temperatures[0] - temperatures[-1]
+        absolute_delta = last_temp - setpoint
+
+        is_decreasing = inner_delta > 0
+        is_increasing = inner_delta < 0
+
+        if (should_decrease
+            and is_increasing
+            and is_cooling
+            and abs(inner_delta) > acceptable_delta
+            and abs(absolute_delta) > acceptable_delta
+        ):
+            raise Anomaly(
+                "temperature-rising",
+                {
+                    "fermenter": fermenter,
+                    "temperatures": temperatures,
+                    "setpoint": setpoint,
+                },
+            )
         elif (
-            setpoint > temperatures[-1]
+            should_increase
             and is_decreasing
-            and temperatures[0] - temperatures[-1] > 0.5
+            and abs(inner_delta) > acceptable_delta
+            and abs(absolute_delta) > acceptable_delta
         ):
             raise Anomaly(
                 "temperature-falling",
@@ -293,6 +333,14 @@ def main():
         type=int,
         help="Max temperature allowed in the Fermentation vessels",
         default=200,
+    )
+
+    parser.add_argument(
+        "--max-delta",
+        dest="max_authorized_delta",
+        type=float,
+        help="Max delta between mesured value and setpoint",
+        default=0.5,
     )
 
     parser.add_argument(
