@@ -267,12 +267,11 @@ class Analyser:
         elif anomaly_type == "temperature-falling":
             message = (
                 f"Attention, le fermenteur {context['fermenter']} descends en temperature "
-                f"({unpack_and_round(context['temperatures'])}) alors qu'il est sensé monter."
+                f"({unpack_and_round(context['temperatures'])}) alors qu'il est sensé monter"
+                f" (consigne à {context['setpoint']}°C)"
             )
         elif anomaly_type == "no-temperatures":
             message = f"Aucune température n'est enregistrée par le fermenteur {context['fermenter']}."
-            send = False
-            message_type = "info"
         else:
             message = anomaly_type
 
