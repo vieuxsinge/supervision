@@ -1,4 +1,4 @@
-from analyse_and_alert import Analyser, Anomaly, STATE
+from analyse_and_alert import Analyser, Anomaly, STATE, Query
 from pytest import raises
 from unittest import mock
 
@@ -107,3 +107,12 @@ def test_same_message_is_not_sent_twice():
 
     analyser.send_alert(Anomaly(STATE.NO_DATA, {'fermenter': 'f1'}))
     assert analyser.send_signal_message.call_count == 1
+
+
+def test_state_is_reset_to_ok_after_succesful_run():
+    analyser = Analyser(db='testdb.json', reset_db=True)
+    analyser.analyse = mock.MagicMock()
+
+    analyser.run(("f1", ), date="now()", group_time="30m")
+
+    assert analyser.db.get(Query().id == "f1")['state'] == STATE.OK
