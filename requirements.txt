@@ -2,3 +2,4 @@ ovh
 influxdb
 sty
 delegator.py
+tinydb
