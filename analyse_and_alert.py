@@ -6,6 +6,13 @@ from influxdb import InfluxDBClient
 import pathlib
 from pprint import pprint
 from sty import fg, bg, ef, rs, Style, RgbFg
+from tinydb import TinyDB, Query
+
+class STATE:
+    OK = 'ok'
+    TEMP_RISING = 'temperature-rising'
+    TEMP_FALLING = 'temperature-falling'
+    NO_DATA = 'no-data'
 
 
 ASCII_ART = """
@@ -49,6 +56,8 @@ class Analyser:
         verbose=False,
         dry_run=False,
         send_test_message=False,
+        db='db.json',
+        reset_db=False,
     ):
         self._client = InfluxDBClient(host, 8086)
         self.signal_group_id = signal_group_id
@@ -57,6 +66,10 @@ class Analyser:
         self.send_test_message = send_test_message
         self.signal_cli = signal_cli
         self.max_authorized_delta = max_authorized_delta
+
+        self.db = TinyDB(db)
+        if reset_db:
+            self.db.truncate()
 
         if self.verbose:
             def _query(*args, **kwargs):
@@ -82,6 +95,19 @@ class Analyser:
         before, after = icons.get(channel, "")
         print(f"{bg.black}{before} {message} {after}")
 
+    def update_state(self, fermenter, state):
+        Fermenter = Query()
+        self.db.upsert({'id': fermenter, 'state': state}, Fermenter.id == fermenter)
+
+    def get_state(self, fermenter):
+        Fermenter = Query()
+        data = self.db.get(Fermenter.id == fermenter)
+        if data:
+            return data['state']
+        else:
+            return STATE.OK # Consider things are okay by default.
+
+
     def run(self, fermenters, date, group_time):
         self.log("logo")
         self.log(
@@ -106,6 +132,7 @@ class Analyser:
                     "check",
                     f"Pas d'anomalies détectées pour {fermenter} (consigne à {context['setpoint']}°C): {unpack_and_round(context['temperatures'])}.",
                 )
+                self.update_state(fermenter, state=STATE.OK)
 
         if self.send_test_message:
             self.send_alert(Anomaly(
@@ -135,11 +162,11 @@ class Analyser:
                     fermenter, start_time, group_time * 2, tries - 1
                 )
             else:
-                raise Anomaly("no-temperatures", {"fermenter": fermenter})
+                raise Anomaly(STATE.NO_DATA, {"fermenter": fermenter})
 
         temperatures = [temp for _, temp in response.raw["series"][0]["values"] if temp]
         if not temperatures:
-            raise Anomaly("no-temperatures", {"fermenter": fermenter})
+            raise Anomaly(STATE.NO_DATA, {"fermenter": fermenter})
         return temperatures
 
     def get_setpoint(self, fermenter):
@@ -229,7 +256,7 @@ class Analyser:
             and abs(absolute_delta) > acceptable_delta
         ):
             raise Anomaly(
-                "temperature-rising",
+                STATE.TEMP_RISING,
                 {
                     "fermenter": fermenter,
                     "temperatures": temperatures,
@@ -243,7 +270,7 @@ class Analyser:
             and abs(absolute_delta) > acceptable_delta
         ):
             raise Anomaly(
-                "temperature-falling",
+                STATE.TEMP_FALLING,
                 {
                     "fermenter": fermenter,
                     "temperatures": temperatures,
@@ -258,28 +285,33 @@ class Analyser:
         send = True
         message_type = "error"
 
-        if anomaly_type == "temperature-rising":
+        if anomaly_type == STATE.TEMP_RISING:
             message = (
                 f"""Le fermenteur {context['fermenter']} grimpe en température """
                 f"""({unpack_and_round(context['temperatures'])}), alors qu'il est """
                 f"""sensé refroidir (consigne à {context['setpoint']}°C)!"""
             )
-        elif anomaly_type == "temperature-falling":
+        elif anomaly_type == STATE.TEMP_FALLING:
             message = (
                 f"Attention, le fermenteur {context['fermenter']} descends en temperature "
                 f"({unpack_and_round(context['temperatures'])}) alors qu'il est sensé monter"
                 f" (consigne à {context['setpoint']}°C)"
             )
-        elif anomaly_type == "no-temperatures":
+        elif anomaly_type == STATE.NO_DATA:
             message = f"Aucune température n'est enregistrée par le fermenteur {context['fermenter']}."
         else:
             message = anomaly_type
 
         self.log(message_type, message)
         if send and not self.dry_run:
-            self.send_multiple_sms(message)
+            # Send the message first, then change the state in the database.
+            if self.get_state(anomaly.context['fermenter']) == anomaly.message:
+                self.log('debug', 'message already sent, not sending it again')
+            else:
+                self.send_signal_message(message)
+                self.update_state(anomaly.context['fermenter'], anomaly.message)
 
-    def send_multiple_sms(self, message):
+    def send_signal_message(self, message):
         command = f'{self.signal_cli} send -m "{message}" -g {self.signal_group_id}'
         resp = delegator.run(command)
         self.log("debug", command)

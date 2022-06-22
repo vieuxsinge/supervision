@@ -1,5 +1,7 @@
-from analyse_and_alert import Analyser, Anomaly
+from analyse_and_alert import Analyser, Anomaly, STATE
 from pytest import raises
+from unittest import mock
+
 
 def test_convergence_to_zero_does_not_raise():
     analyser = Analyser()
@@ -36,7 +38,7 @@ def test_cold_unit_breaks_during_cc():
             setpoint=0,
             acceptable_delta=0.5
         )
-    assert excinfo.value.message == "temperature-rising"
+    assert excinfo.value.message == STATE.TEMP_RISING
 
 
 def test_cold_unit_breaks_during_fermentation():
@@ -51,7 +53,7 @@ def test_cold_unit_breaks_during_fermentation():
             setpoint=18,
             acceptable_delta=0.5
         )
-    assert excinfo.value.message == "temperature-rising"
+    assert excinfo.value.message == STATE.TEMP_RISING
 
 
 def test_oscillation_around_20():
@@ -66,7 +68,7 @@ def test_oscillation_around_20():
             setpoint=20,
             acceptable_delta=0.5
         )
-    assert excinfo.value.message == "temperature-rising"
+    assert excinfo.value.message == STATE.TEMP_RISING
 
 
 def test_temperature_decreases_but_should_be_increasing():
@@ -81,7 +83,7 @@ def test_temperature_decreases_but_should_be_increasing():
             setpoint=20,
             acceptable_delta=0.5
         )
-    assert excinfo.value.message == "temperature-falling"
+    assert excinfo.value.message == STATE.TEMP_FALLING
 
 
 def test_steady_temperature_should_not_raise():
@@ -95,3 +97,13 @@ def test_steady_temperature_should_not_raise():
         setpoint=20,
         acceptable_delta=0.5
     )
+
+def test_same_message_is_not_sent_twice():
+    analyser = Analyser(db='testdb.json', reset_db=True)
+    analyser.send_signal_message = mock.MagicMock()
+
+    analyser.send_alert(Anomaly(STATE.NO_DATA, {'fermenter': 'f1'}))
+    assert analyser.send_signal_message.call_count == 1
+
+    analyser.send_alert(Anomaly(STATE.NO_DATA, {'fermenter': 'f1'}))
+    assert analyser.send_signal_message.call_count == 1
